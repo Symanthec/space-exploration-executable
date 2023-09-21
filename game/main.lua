@@ -10,7 +10,7 @@ MAX_SPEED = 300
 MAX_FORCE = FORCE / 10
 DELTA_ANGLE = math.pi 
 MAX_BOTS = 10
-SPAN = 300
+SPAN = 800
 
 
 push = 0 -- whether ship flies or not
@@ -87,16 +87,17 @@ function main.keypressed(key, scancode, isrepeat)
 		player:setForce( 0, 0 )
 		player:setSpeed( 0, 0 )
 		player:setPosition( gwidth / 2.0, gheight / 2.0 )
-		player.angular_acc = 0
-		player.angular_velocity = 0
+		player.angle = 0.0
+		player.angular_acc = 0.0
+		player.angular_velocity = 0.0
 	elseif scancode == "w" then
 		push = math.min(3.0, push + 1) 
 	elseif scancode == "s" then
 		push = math.max(-3.0, push - 1)
 	elseif scancode == "a" then
-		player.angular_acc = math.min(3 * DELTA_ANGLE, player.angular_acc - DELTA_ANGLE)
+		player.angular_acc = math.max(-3 * DELTA_ANGLE, player.angular_acc - DELTA_ANGLE)
 	elseif scancode == "d" then
-		player.angular_acc = math.max(-3 * DELTA_ANGLE, player.angular_acc + DELTA_ANGLE)
+		player.angular_acc = math.min(3 * DELTA_ANGLE, player.angular_acc + DELTA_ANGLE)
 	elseif scancode == "b" then
 		bots_enabled = not bots_enabled
 	elseif scancode == "e" then
@@ -123,7 +124,9 @@ end
 white = {255, 255, 255}
 red = {255, 0, 0}
 player_color = {128, 128, 0}
-blue = {0, 64, 255}
+blue = {0, 64, 192}
+green = {64, 255, 64}
+
 
 function main.draw()
 	-- draw stuff
@@ -154,6 +157,10 @@ function main.draw()
 	end
 
 	if debug_draw then
+		love.graphics.setColor(green)
+		dir = player:direction()
+		love.graphics.line(player.x, player.y, player.x + 100 * dir[1], player.y + 100 * dir[2])
+
 		love.graphics.setColor(blue)
 		love.graphics.line(player.x, player.y, player.x + player.ax, player.y + player.ay)
 		love.graphics.setColor(red)
