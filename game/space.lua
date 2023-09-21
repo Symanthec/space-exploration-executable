@@ -30,9 +30,12 @@ function spawnShip(proto)
 		ship.angular_velocity = proto.angular_velocity
 		ship.angular_acc = proto.angular_acc
 		ship.mass = proto.mass
+<<<<<<< HEAD
 
 		ship.max_speed = proto.max_speed
 		ship.max_force = proto.max_force
+=======
+>>>>>>> 461a78f (Keybinds rework, player assignment and manipulation to player.lua)
 	end
 
 	return ship
@@ -90,12 +93,6 @@ function controller.keyreleased(key, scancode)
 end
 
 
-function randomPlayer()
-	i = math.random(MAX_BOTS)
-	setPlayer(ships[i])
-end
-
-
 function controller.load()
 	love.keyboard.setKeyRepeat(true)
 
@@ -107,8 +104,6 @@ function controller.load()
 	keybinds:onPress("space", resetPlayer)
 	keybinds:onPress("b", showBots)
 	keybinds:onPress("v", toggleDebug)
-	
-	keybinds:onPress("r", randomPlayer)
 
 	keybinds:onPress("w", pullPlayer)
 	keybinds:onRelease("w", pullPlayer)
