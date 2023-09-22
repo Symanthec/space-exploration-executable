@@ -30,12 +30,9 @@ function spawnShip(proto)
 		ship.angular_velocity = proto.angular_velocity
 		ship.angular_acc = proto.angular_acc
 		ship.mass = proto.mass
-<<<<<<< HEAD
 
 		ship.max_speed = proto.max_speed
 		ship.max_force = proto.max_force
-=======
->>>>>>> 461a78f (Keybinds rework, player assignment and manipulation to player.lua)
 	end
 
 	return ship
