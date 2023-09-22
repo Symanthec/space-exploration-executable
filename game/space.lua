@@ -90,6 +90,12 @@ function controller.keyreleased(key, scancode)
 end
 
 
+function randomPlayer()
+	i = math.random(MAX_BOTS)
+	setPlayer(ships[i])
+end
+
+
 function controller.load()
 	love.keyboard.setKeyRepeat(true)
 
@@ -101,6 +107,8 @@ function controller.load()
 	keybinds:onPress("space", resetPlayer)
 	keybinds:onPress("b", showBots)
 	keybinds:onPress("v", toggleDebug)
+	
+	keybinds:onPress("r", randomPlayer)
 
 	keybinds:onPress("w", pullPlayer)
 	keybinds:onRelease("w", pullPlayer)
