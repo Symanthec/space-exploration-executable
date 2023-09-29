@@ -1,216 +1,135 @@
 require("keybinds")
 require("print")
-require("body")
-
-require("player")
+require("unvector")
 
 
-FORCE = 1000
-MAX_SPEED = 300
-MAX_FORCE = FORCE / 10.0
-DELTA_ANGLE = math.pi
-SPAN = 800
-MAX_BOTS = 15
+local main = {}
+
+local FORCE = 100
+local ANGLE = 5
+local ship_poly = { 16, 0, -16, -16, -8, 0, -16, 16 }
 
 
-local bots_enabled = true
-local debug_draw = false
+
+local player = {
+	body = nil,
+	ang_acc = 0.0,
+	nozzle = 0, -- tangent force measure
+	nozzle_lim = { low = -4, high = 7 }
+}
 
 
-function spawnShip(proto)
-	local ship = Body.new()
-	
-	if proto then
-		ship:setPosition(proto.x, proto.y)
-		ship:setSpeed(proto.vx, proto.vy)
-		ship:setForce(proto.ax, proto.ay)
-		ship:size(proto.width, proto.height)	
+function createShip()
+	local ship = love.physics.newBody(world, 0, 0, "dynamic")
+	ship:setMass(100)
 
-		ship.angle = proto.angle
-		ship.angular_velocity = proto.angular_velocity
-		ship.angular_acc = proto.angular_acc
-		ship.mass = proto.mass
+	-- unreal
+--	ship:setAngularDamping(10)
+	ship:setLinearDamping(.5)
 
-		ship.max_speed = proto.max_speed
-		ship.max_force = proto.max_force
-	end
-
+	local fix = love.physics.newFixture(ship, ship_shape)
 	return ship
 end
 
 
-function randomizeShip(ship, near)
-	local x = (math.random() - 0.5) * SPAN + near.x
-	local y = (math.random() - 0.5) * SPAN + near.y
-	ship:setPosition(x, y)
-
-	local angle = math.random() * math.pi * 2
-	ship.angle = angle
+function main.update(delta)
+	-- for ship in ships do
+	-- 	ship:applyForce(ship.dir * FORCE * ship.nozzle, ship.dir * FORCE * ship.nozzle)
+	local angle = player.body:getAngle()
+	player.dir = { x = math.cos(angle), y = math.sin(angle) }
+	player.body:applyForce(player.dir.x * FORCE * player.nozzle, player.dir.y * FORCE * player.nozzle)
+	player.body:setAngularVelocity(player.body:getAngularVelocity() + player.ang_acc * delta * ANGLE)
+	world:update(delta)
 	
-	local speed = math.random() * MAX_SPEED
-	ship:setSpeed(speed * math.cos(angle), speed * math.sin(angle))
+	transform = love.math.newTransform()
+	transform:translate(player.body:getPosition())
+	transform:rotate(player.body:getAngle())
 end
 
 
-local toggleDebug = function(ispressed, key, scancode, isrepeat)
-	if ispressed and not isrepeat then
-		debug_draw = not debug_draw
-	end
+function main.draw()
+	-- World
+	love.graphics.push()
+	love.graphics.replaceTransform(transform)
+	love.graphics.polygon("line", ship_poly)
+	love.graphics.pop()
+	
+	-- UI
+	vx, vy = player.body:getLinearVelocity()
+
+	printReset()
+	print(vx)
+	print(vy)
+	print(player.body:getX())
+	print(player.body:getY())
+	print(player.nozzle)
+	print(player.body:getAngle())
 end
 
 
-local showBots = function(ispressed, key, scancode, isrepeat)
-	if ispressed and not isrepeat then
-		bots_enabled = not bots_enabled
-	end
-end
+function main.load()
+	width = love.graphics.getWidth()
+	height = love.graphics.getHeight()
 
+	font = love.graphics.newFont("assets/press-start-2p.ttf")
+	love.graphics.setFont(font)
 
-local quitProgram = function()
-	love.event.quit()
-end
-
-
-local controller = {}
-
-
-function controller.keypressed(key, scancode, isrepeat)
-	last_scan = scancode
-	if not keybinds:press(key, scancode, isrepeat) then
-		-- parse the remainder of possible key combos
-	end
-end
-
-
-function controller.keyreleased(key, scancode)
-	last_scan = scancode
-	if not keybinds:release(key, scancode) then
-		-- parse the remainder of possible key combos
-	end
-end
-
-
-function randomPlayer()
-	i = math.random(MAX_BOTS)
-	setPlayer(ships[i])
-end
-
-
-function controller.load()
+	-- Ship creation
+	world = love.physics.newWorld(0, 0, true) -- true = allow sleep
+	ship_shape = love.physics.newPolygonShape(ship_poly)
+	
+	player.body = createShip()
+	player.body:setPosition(width / 2.0, height / 2.0)
+	
 	love.keyboard.setKeyRepeat(true)
+	local keybinds = Keybinds.new()
+	local handler = defaultKeybindsHandler(keybinds)
+	main.keypressed = handler.keypressed
+	main.keyreleased = handler.keyreleased
 
-	gwidth = love.graphics.getWidth()
-	gheight = love.graphics.getHeight()
+	keybinds:onScan("escape", function() love.event.quit() end)
 
-	keybinds = Keybinds.new()
-	keybinds:onPress("escape", quitProgram)
-	keybinds:onPress("space", resetPlayer)
-	keybinds:onPress("b", showBots)
-	keybinds:onPress("v", toggleDebug)
-	
-	keybinds:onPress("r", randomPlayer)
-
-	keybinds:onPress("w", pullPlayer)
-	keybinds:onRelease("w", pullPlayer)
-	keybinds:onPress("s", pullPlayer)
-	keybinds:onRelease("s", pullPlayer)
-
-	keybinds:onPress("a", rotatePlayer)
-	keybinds:onRelease("a", rotatePlayer)
-	keybinds:onPress("d", rotatePlayer)
-	keybinds:onRelease("d", rotatePlayer)
-	
-	proto = Body.new()
-	proto.mass = 100
-	proto.max_speed = MAX_SPEED
-	proto.max_force = MAX_FORCE
-	proto:setPosition(gwidth / 2.0, gheight / 2.0)
-	proto:size(16, 16)
-	setPlayer(proto)
-
-	ships = {}
-	for i=1,MAX_BOTS do
-		ships[i] = spawnShip(player)
-		randomizeShip(ships[i], player)
-	end
-	ships[MAX_BOTS + 1] = player
-end
-
-
-function controller.update(delta)
-	updatePlayer(delta)
-
-	local i = 1
-	while ships[i] ~= nil do
-		if bots_enabled or ships[i] == player then
-			ships[i]:update(delta)
-		end
-		if ships[i] ~= player then
-			if math.abs(ships[i].x - player.x) > SPAN / 2.0 or 
-			   math.abs(ships[i].y - player.y) > SPAN / 2.0 then
-			   	randomizeShip(ships[i], player)
+	-- Player controls
+	local thrust = function(ispressed, key, scancode, isrepeat)
+		if ispressed then
+			if scancode == "w" and (player.nozzle < player.nozzle_lim.high) then
+				player.nozzle = player.nozzle + 1
+			elseif scancode == "s" and (player.nozzle > player.nozzle_lim.low) then
+				player.nozzle = player.nozzle - 1
 			end
+		else
+			player.nozzle = 0
+			player.body:applyForce(0, 0) 
 		end
-
-		i = i + 1
-	end
-end
-
-
-white = {255, 255, 255}
-red = {255, 0, 0}
-yellow = {128, 128, 0}
-blue = {0, 0, 192}
-green = {0, 255, 0}
-
-
-function controller.draw()
-	-- draw stuff
-
-	love.graphics.setColor(yellow)
-	if debug_draw then
-		love.graphics.rectangle("line", player.x - SPAN / 2.0, player.y - SPAN / 2.0, SPAN, SPAN)
 	end
 
-	love.graphics.setColor(white)
-	local i = 1
-	while ships[i] ~= nil do
-		local ship = ships[i]
-		
-		if ship == player then love.graphics.setColor(yellow) end
-		love.graphics.push()
-		love.graphics.translate(ship.x, ship.y)
-		love.graphics.rotate(ship.angle)
-		love.graphics.rectangle("line", -ship.half_w, -ship.half_h, ship.width, ship.height)
-		love.graphics.pop()
-		if ship == player then love.graphics.setColor(white) end
-
-		i = i + 1
+	local rotate = function(ispressed, key, scancode, isrepeat)
+		if ispressed then
+			if scancode == "a" then
+				player.ang_acc = player.ang_acc - 1
+			else -- scancode == "d" then
+				player.ang_acc = player.ang_acc + 1
+			end
+		else
+			player.ang_acc = 0
+		end
 	end
-
-	if debug_draw then
-		love.graphics.setColor(green)
-		dir = player:direction()
-		love.graphics.line(player.x, player.y, player.x + 100 * dir[1], player.y + 100 * dir[2])
-
-		love.graphics.setColor(blue)
-		love.graphics.line(player.x, player.y, player.x + player.ax, player.y + player.ay)
-		love.graphics.setColor(red)
-		love.graphics.line(player.x, player.y, player.x + player.vx, player.y + player.vy)
 	
-		printReset()
-		print("FPS = " .. love.timer.getFPS())
-		print("X  = ".. player.x)
-		print("Y  = ".. player.y)
-		print("Vx = ".. player.vx)
-		print("Vy = ".. player.vy)
-		print("Ax = ".. player.ax)
-		print("Ay = ".. player.ay)
-		print("Ang= ".. player.angle)
-		print("Wv = ".. player.angular_velocity)
-		print("W  = ".. player.angular_acc)
-	end
+	keybinds:onScan("w", thrust)
+	keybinds:onScan("s", thrust)
+	keybinds:onScan("a", rotate)
+	keybinds:onScan("d", rotate)
+	
+	keybinds:onPress("r", function()
+		player.body:setPosition(width / 2.0, height / 2)
+		player.body:setAngle(0)
+		player.body:setAngularVelocity(0)
+		player.body:setLinearVelocity(0, 0)
+	end)
 end
 
 
-return controller
+
+
+
+return main

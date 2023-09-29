@@ -124,14 +124,17 @@ end
 
 
 function Body.addForce(body, fx, fy)
-	fx = tonumber(fx) or 0.0
-	fy = tonumber(fy) or 0.0
+	local fx = tonumber(fx) or 0.0
+	local fy = tonumber(fy) or 0.0
 	body:setForce(body.ax + fx / body.mass, body.ay + fy / body.mass)
 end
 
 
-function Body.stop(body)
-	body:setForce{}
+function Body.intersect(body, bd)
+	-- simple sphere intersection (i'm lazy)
+	local r1, r2 = math.max(body.half_w, body.half_h), math.max(bd.half_w, bd.half_h)
+	local dist = math.sqrt( math.pow(body.x - bd.x, 2), math.pow(body.y - bd.y, 2) )
+	return dist <= r1 + r2
 end
 
 
@@ -147,6 +150,28 @@ function Body.update(body, delta)
 
 	body:addAngularVelocity(body.angular_acc * delta)
 	body:setAngle(body.angle + body.angular_velocity * delta)
+end
+
+
+function Body.clone(proto)
+	local clone = Body.new()
+	
+	if proto then
+		clone:setPosition(proto.x, proto.y)
+		clone:setSpeed(proto.vx, proto.vy)
+		clone:setForce(proto.ax, proto.ay)
+		clone:size(proto.width, proto.height)	
+
+		clone.angle = proto.angle
+		clone.angular_velocity = proto.angular_velocity
+		clone.angular_acc = proto.angular_acc
+		clone.mass = proto.mass
+
+		clone.max_speed = proto.max_speed
+		clone.max_force = proto.max_force
+	end
+
+	return clone
 end
 
 

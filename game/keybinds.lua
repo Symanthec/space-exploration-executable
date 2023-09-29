@@ -2,6 +2,21 @@
 -- Keybind structure:
 -- function cb(ispressed, key, scancode, isrepeat), omit isrepeat if on release
 
+function defaultKeybindsHandler(keybinds)
+	local handler = {}
+
+	function handler.keypressed(key, scancode, isrepeat)
+		return keybinds:press(key, scancode, isrepeat)
+	end
+
+	function handler.keyreleased(key, scancode)
+		return keybinds:release(key, scancode)
+	end
+
+	return handler
+end
+
+
 Keybinds = {}
 Keybinds.__index = Keybinds
 
@@ -90,4 +105,4 @@ function Keybinds.clear(binds)
 end
 
 
-return Keybinds
+return Keybinds, defaultKeyboardHandler
