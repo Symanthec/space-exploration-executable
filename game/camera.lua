@@ -1,40 +1,42 @@
-local function camera_delta(start, finish, tau)
-	-- 0 <= Tau <= 1
-	return {
-		x = start.x + (finish.x - start.x) * tau,
-		y = start.y + (finish.y - start.y) * tau
-	}
+Camera = {
+	transform = love.math.newTransform(),
+	scale = 1.0,
+	x = 0,
+	y = 0,
+	stepfunc = function(delta) return 1.0 - delta end,
+	target = nil
+}
+
+
+function Camera:setScale(scale)
+	self.scale = scale
 end
 
 
-Camera = {}
-Camera.__index = Camera
-
-
-function Camera.new(target)
-	local cam = { x = 0.0, y = 0.0, _target = target, _rate = 1.0 }
-	setmetatable(cam, Camera)
-	return cam
+function Camera:setStep(step)
+	self.stepfunc = step
 end
 
 
-function Camera.target(camera, tgt)
-	camera._target = tgt
+function Camera:setTarget(tgt)
+	self.target = tgt
 end
 
 
-function Camera.update(camera, delta)
-	if camera._target then
-		local range = math.sqrt( math.pow(camera.x - camera._target.x, 2) + math.pow(camera.y - camera._target.y, 2))
-		local new_pos = camera_delta(camera, camera._target, camera._rate)
-		camera.x = new_pos.x
-		camera.y = new_pos.y
-	end
-end
+function Camera:update(delta)
+	if not self.target then return end
 
-
-function Camera.rate(camera, rate)
-	camera._rate = tonumber(rate) or camera._rate
+	local dx, dy = self.target.body:getPosition()
+	dx, dy = dx - self.x, dy - self.y
+	
+	local step = self.stepfunc(delta)
+	self.x, self.y = self.x + dx * step, self.y + dy * step
+	
+	self.transform = love.math.newTransform()
+	self.transform:translate(
+		width / 2 - self.x * self.scale,
+		height/ 2 - self.y * self.scale)
+	self.transform:scale(self.scale)
 end
 
 

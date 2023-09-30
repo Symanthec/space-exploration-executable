@@ -2,38 +2,36 @@ require("keybinds")
 require("print")
 require("unvector")
 require("entity")
+require("camera")
+
 
 local main = {}
 
-local FORCE = 100
+local FORCE = 10
 local ANGLE = 5
 local SPAN = 600
 
 
-local ship_body = { 16, 0, -16, -16, -12, -6, -16, -6, -16, 6, -12, 6, -16, 16 }
-local ship_poly = { 16, 0, -16, -16, -12, -6, -16, -6, -16, 6, -12, 6, -16, 16 }
+local ship_body = { 8, 0, -8, -8, -6, -3, -8, -3, -8, 3, -6, 3, -8, 8 }
+local ship_poly = { 8, 0, -8, -8, -6, -3, -8, -3, -8, 3, -6, 3, -8, 8 }
+local asteroid_poly = { -8, 16, 8, 16, 16, 8, 16, -8, 8, -16, -8, -16, -16, -8, -16, 8 }
 
 
-local camera = {}
 local entities = UnVector.new()
 local last_scan = ""
+
+
 local scale = 1
-
-local scale_t = { min = 0.7, max = 1.5, current = 1.0, step = 0.01  }
+local scale_t = { min = 0.7, max = 2, current = 1.0, step = 0.01  }
 local scale = scale_t.current -- quick name
+local zooming = 0
 
-zooming = 0
 
-
-function createShip()
-	local ship = love.physics.newBody(world, 0, 0, "dynamic")
-	ship:setMass(100)
-
---	ship:setAngularDamping(.2)
---	ship:setLinearDamping(.5)
-
-	local fix = love.physics.newFixture(ship, ship_shape)
-	return ship
+function createBody(mass, shape)
+	local body = love.physics.newBody(world, 0, 0, "dynamic")
+	body:setMass(tonumber(mass) or 1.0)
+	local fix = love.physics.newFixture(body, shape)
+	return body
 end
 
 
@@ -52,8 +50,6 @@ end
 
 
 function main.update(delta)
-	-- for ship in ships do
-	-- 	ship:applyForce(ship.dir * FORCE * ship.nozzle, ship.dir * FORCE * ship.nozzle)
 	local angle = player.body:getAngle()
 	player.dir = { x = math.cos(angle), y = math.sin(angle) }
 	player.body:applyForce(player.dir.x * FORCE * player.nozzle, player.dir.y * FORCE * player.nozzle)
@@ -64,13 +60,8 @@ function main.update(delta)
 	-- scale
 	scale_t.current = math.min(scale_t.max, math.max(scale_t.min, scale_t.current + scale_t.step * zooming))
 	scale = scale_t.current
-
-	camera.transform = love.math.newTransform()
-	scale = scale_t.current
-	camera.transform:translate(
-		width / 2 - player.body:getX() * scale,
-		height / 2 - player.body:getY() * scale)
-	camera.transform:scale(scale)
+	camera:setScale(scale)
+	camera:update(delta)
 	
 	for _, ent in ipairs(entities) do
 		local transform = love.math.newTransform()
@@ -83,20 +74,14 @@ end
 
 function main.draw()
 	-- World
-
-	-- for entity in entities do
-	-- 	love.graphics.replaceTransform(entity.transform)
-	-- 	love.graphics.polygon("fill", entity.poly)
-	-- end
 	love.graphics.push()
 	love.graphics.replaceTransform(camera.transform)
 	for _, ent in ipairs(entities) do
 		love.graphics.push()
 		love.graphics.applyTransform(ent.transform)
 		
-		if ent == player then love.graphics.setColor(1, .89, 0) end
-		love.graphics.polygon("fill", ship_poly)
-		if ent == player then love.graphics.setColor(1, 1, 1) end
+		love.graphics.setColor(ent.color)
+		love.graphics.polygon("fill", ent.polygon)
 
 		love.graphics.pop()
 	end
@@ -110,6 +95,10 @@ function main.draw()
 	print(player.body:getAngle())
 	print(last_scan)
 	print(scale)
+
+	for k, v in ipairs(camera) do
+		print(tostring(k).." "..tostring(v))
+	end
 end
 
 
@@ -122,15 +111,27 @@ function main.load()
 
 	-- Ship creation
 	world = love.physics.newWorld(0, 0, true) -- true = allow sleep
-	ship_shape = love.physics.newPolygonShape(ship_body)
+	local ship_shape = love.physics.newPolygonShape(ship_body)
 	
 	player = Entity.new()
-	player.body = createShip()
+	player.body = createBody(100, ship_shape)
+	player.color = {1, .89, 0}
+	player.polygon = ship_poly
 	player.body:setPosition(width / 2.0, height / 2.0)
 	entities:add(player)
+	camera = Camera
+	camera:setTarget(player)
 
+	local rate = .8
+	camera:setStep(function(dt) return 1 - rate * math.exp(-dt) end)
+
+
+	local asteroid_shape = love.physics.newPolygonShape(asteroid_poly)
 	for i=1,20 do
-		local ent = { body = createShip() }
+		local ent = Entity.new()
+		ent.body = createBody(1000, asteroid_shape)
+		ent.polygon = asteroid_poly
+		ent.color = {1, 1, 1}
 		randomizeEntity(ent, player, 0)
 		entities:add(ent)
 	end
